@@ -1,43 +1,51 @@
+from telethon import events
+
 async def handle_finale_commands(event):
-    text = event.raw_text.lower()
-    
-    if text.startswith('/menu'):
-        await event.respond(
-            "📋 *Comandi disponibili:*\n"
-            "/radar — panoramica titoli\n"
-            "/notizie TICKER — ultime news\n"
-            "/rsi TICKER — RSI attuale\n"
-            "/vwap TICKER — VWAP vs prezzo\n"
-            "/bilancio TICKER — check-up azienda\n"
-            "/etf TICKER — ETF legati al titolo\n"
-            "/previsione TICKER — forecast esterni\n"
-            "/idee — contenuti da value source\n"
-        )
-    
-    elif text.startswith('/notizie'):
-        # TODO: inserisci codice per /notizie
-        await event.respond("Funzione /notizie in arrivo!")
+    try:
+        # Qui puoi aggiungere tutti i comandi finali del bot
+        # Esempio: /notizie, /rsi, /vwap, /bilancio, /etf, /previsione, /idee
 
-    elif text.startswith('/rsi'):
-        # TODO: inserisci codice per /rsi
-        await event.respond("Funzione /rsi in arrivo!")
+        text = event.raw_text.lower()
 
-    elif text.startswith('/vwap'):
-        # TODO: inserisci codice per /vwap
-        await event.respond("Funzione /vwap in arrivo!")
-
-    elif text.startswith('/bilancio'):
-        # TODO: inserisci codice per /bilancio
-        await event.respond("Funzione /bilancio in arrivo!")
-
-    elif text.startswith('/etf'):
-        # TODO: inserisci codice per /etf
-        await event.respond("Funzione /etf in arrivo!")
-
-    elif text.startswith('/previsione'):
-        # TODO: inserisci codice per /previsione
-        await event.respond("Funzione /previsione in arrivo!")
-
-    elif text.startswith('/idee'):
-        # TODO: inserisci codice per /idee
-        await event.respond("Funzione /idee in arrivo!")
+        if text.startswith("/notizie"):
+            ticker = text.split(" ", 1)[1].upper() if " " in text else None
+            if ticker:
+                await event.respond(f"📰 Ultime notizie per {ticker} (placeholder).")
+            else:
+                await event.respond("❗ Usa: /notizie TICKER")
+        elif text.startswith("/rsi"):
+            ticker = text.split(" ", 1)[1].upper() if " " in text else None
+            if ticker:
+                await event.respond(f"📈 RSI attuale per {ticker} (placeholder).")
+            else:
+                await event.respond("❗ Usa: /rsi TICKER")
+        elif text.startswith("/vwap"):
+            ticker = text.split(" ", 1)[1].upper() if " " in text else None
+            if ticker:
+                await event.respond(f"📊 VWAP vs prezzo per {ticker} (placeholder).")
+            else:
+                await event.respond("❗ Usa: /vwap TICKER")
+        elif text.startswith("/bilancio"):
+            ticker = text.split(" ", 1)[1].upper() if " " in text else None
+            if ticker:
+                await event.respond(f"🏦 Bilancio aziendale per {ticker} (placeholder).")
+            else:
+                await event.respond("❗ Usa: /bilancio TICKER")
+        elif text.startswith("/etf"):
+            ticker = text.split(" ", 1)[1].upper() if " " in text else None
+            if ticker:
+                await event.respond(f"💼 ETF legati a {ticker} (placeholder).")
+            else:
+                await event.respond("❗ Usa: /etf TICKER")
+        elif text.startswith("/previsione"):
+            ticker = text.split(" ", 1)[1].upper() if " " in text else None
+            if ticker:
+                await event.respond(f"🔮 Previsioni esterne per {ticker} (placeholder).")
+            else:
+                await event.respond("❗ Usa: /previsione TICKER")
+        elif text == "/idee":
+            await event.respond("💡 Contenuti da value source (placeholder).")
+        else:
+            await event.respond("❓ Comando non riconosciuto.")
+    except Exception as e:
+        await event.respond(f"❗ Errore nel comando: {e}")
