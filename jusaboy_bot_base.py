@@ -1,9 +1,11 @@
 from telethon import TelegramClient, events, Button
 
 # === CONFIGURAZIONE ===
-api_id = 21024442
-api_hash = 'dd1acab8b7c4ee4904023e214dcfee04'
-bot_token = '7911673480:AAHD9Y_tu5qkzJNCAlHpNmud_wbmSRXzab4'
+import os
+
+api_id = int(os.getenv('API_ID'))
+api_hash = os.getenv('API_HASH')
+bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
 
 bot = TelegramClient('jusaboy_session', api_id, api_hash).start(bot_token=bot_token)
 
