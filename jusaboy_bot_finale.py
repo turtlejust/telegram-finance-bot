@@ -1,42 +1,43 @@
-from telethon import TelegramClient, events, Button
-
-# === CONFIGURAZIONE ===
-import os
-
-api_id = int(os.getenv('API_ID'))
-api_hash = os.getenv('API_HASH')
-bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-
-
-# Crea client
-bot = TelegramClient('jusaboy_session', api_id, api_hash).start(bot_token=bot_token)
-
-# === COMANDI BASE ===
-@bot.on(events.NewMessage(pattern='/start'))
-async def start(event):
-    if event.is_private:
+async def handle_finale_commands(event):
+    text = event.raw_text.lower()
+    
+    if text.startswith('/menu'):
         await event.respond(
-            "👋 *Benvenuto nel tuo Assistente Finanziario!*\n\n"
-            "Scegli cosa vuoi fare:",
-            buttons=[
-                [Button.text("📊 Radar Watchlist"), Button.text("➕ Aggiungi Ticker")],
-                [Button.text("⚙️ Menu completo"), Button.text("❌ Esci")]
-            ]
+            "📋 *Comandi disponibili:*\n"
+            "/radar — panoramica titoli\n"
+            "/notizie TICKER — ultime news\n"
+            "/rsi TICKER — RSI attuale\n"
+            "/vwap TICKER — VWAP vs prezzo\n"
+            "/bilancio TICKER — check-up azienda\n"
+            "/etf TICKER — ETF legati al titolo\n"
+            "/previsione TICKER — forecast esterni\n"
+            "/idee — contenuti da value source\n"
         )
+    
+    elif text.startswith('/notizie'):
+        # TODO: inserisci codice per /notizie
+        await event.respond("Funzione /notizie in arrivo!")
 
-@bot.on(events.NewMessage(pattern='/menu'))
-async def menu(event):
-    await event.respond(
-        "📋 *Comandi disponibili:*\n"
-        "/radar — panoramica titoli\n"
-        "/notizie TICKER — ultime news\n"
-        "/rsi TICKER — RSI attuale\n"
-        "/vwap TICKER — VWAP vs prezzo\n"
-        "/bilancio TICKER — check-up azienda\n"
-        "/etf TICKER — ETF legati al titolo\n"
-        "/previsione TICKER — forecast esterni\n"
-        "/idee — contenuti da value source\n"
-    )
+    elif text.startswith('/rsi'):
+        # TODO: inserisci codice per /rsi
+        await event.respond("Funzione /rsi in arrivo!")
 
-print("🤖 Bot avviato!")
-bot.run_until_disconnected()
+    elif text.startswith('/vwap'):
+        # TODO: inserisci codice per /vwap
+        await event.respond("Funzione /vwap in arrivo!")
+
+    elif text.startswith('/bilancio'):
+        # TODO: inserisci codice per /bilancio
+        await event.respond("Funzione /bilancio in arrivo!")
+
+    elif text.startswith('/etf'):
+        # TODO: inserisci codice per /etf
+        await event.respond("Funzione /etf in arrivo!")
+
+    elif text.startswith('/previsione'):
+        # TODO: inserisci codice per /previsione
+        await event.respond("Funzione /previsione in arrivo!")
+
+    elif text.startswith('/idee'):
+        # TODO: inserisci codice per /idee
+        await event.respond("Funzione /idee in arrivo!")
