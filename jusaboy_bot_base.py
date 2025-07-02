@@ -16,8 +16,10 @@ bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
 # Avvia il client Telegram
 bot = TelegramClient('jusaboy_session', api_id, api_hash).start(bot_token=bot_token)
 
-# --- SCHEDULER ---
-scheduler = AsyncIOScheduler(timezone="Europe/Rome")
+# --- EVENT LOOP & SCHEDULER ---
+# Recupera il loop attuale prima di avviare il scheduler
+loop = asyncio.get_event_loop()
+scheduler = AsyncIOScheduler(event_loop=loop, timezone="Europe/Rome")
 
 async def morning_report():
     """
@@ -45,7 +47,7 @@ async def morning_report():
     for chat_id in subscribed_users:
         await bot.send_message(chat_id, report, parse_mode="markdown")
 
-# Pianifica il report ogni giorno alle 08:00
+# Pianifica il report ogni giorno alle 08:00 e avvia il scheduler
 scheduler.add_job(morning_report, 'cron', hour=8, minute=0)
 scheduler.start()
 
