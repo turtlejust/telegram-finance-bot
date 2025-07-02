@@ -33,11 +33,10 @@ async def morning_report():
             tickers = json.load(f).get("tickers", [])
     except FileNotFoundError:
         pass
+
     # 2. Costruisci linee di report
     lines = [f"• {t.upper()}: RSI=--, VWAP=--" for t in tickers]
-    report = "☀️ *Report Mattutino*
-
-" + "\n".join(lines)
+    report = "☀️ *Report Mattutino*\n\n" + "\n".join(lines)
 
     # 3. Lista di utenti (da gestire tu/catalogare)
     subscribed_users = []  # TODO: carica qui i chat_id degli utenti iscritti
@@ -46,7 +45,7 @@ async def morning_report():
     for chat_id in subscribed_users:
         await bot.send_message(chat_id, report, parse_mode="markdown")
 
-# Pianifica il report ogni giorni alle 08:00
+# Pianifica il report ogni giorno alle 08:00
 scheduler.add_job(morning_report, 'cron', hour=8, minute=0)
 scheduler.start()
 
@@ -78,7 +77,6 @@ async def callback_handler(event):
     elif data == "google_sheets":
         await handle_google_sheets_command(event)
     elif data == "menu":
-        # Richiama la lista comandi dal modulo esistente
         await event.respond(
             "📋 *Comandi disponibili:*\n"
             "/radar — panoramica titoli\n"
@@ -97,14 +95,13 @@ async def callback_handler(event):
     elif data == "start":
         await start(event)
     else:
-        # Fallback a comandi testuali per handle_finale
+        # Fallback a comandi testuali
         await handle_finale_commands(event)
 
 # Fallback per tutti gli altri messaggi
 @bot.on(events.NewMessage)
 async def fallback_handler(event):
     # Gestisci qui l'inserimento manuale di ticker dopo "aggiungi"
-    # oppure passa ai comandi finali
     await handle_finale_commands(event)
 
 print("🤖 Bot avviato con menu inline e scheduler APScheduler!")
