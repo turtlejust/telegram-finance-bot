@@ -3,14 +3,17 @@ import feedparser
 import yfinance as yf
 import pandas as pd
 
-# 1️⃣ RSI con fallback su 6mo -> 12mo
+# 1️⃣ RSI con fallback su 6mo -> 1y
 def calcola_rsi(ticker: str, period: int = 14) -> float:
     """
     Calcola l’RSI su base giornaliera.
-    Fallback automatico da 6 a 12 mesi se dati insufficienti.
+    Fallback automatico da 6 mesi a 1 anno se dati insufficienti o errori di rete.
     """
-    for timeframe in ("6mo", "12mo"):
-        data = yf.Ticker(ticker).history(period=timeframe)["Close"]
+    for timeframe in ("6mo", "1y"):
+        try:
+            data = yf.Ticker(ticker).history(period=timeframe)["Close"]
+        except Exception:
+            continue
         if len(data) >= period + 1:
             delta = data.diff().dropna()
             gain = delta.where(delta > 0, 0.0)
@@ -20,15 +23,26 @@ def calcola_rsi(ticker: str, period: int = 14) -> float:
             rs = avg_gain / avg_loss
             rsi = 100 - (100 / (1 + rs))
             return float(rsi.iloc[-1])
-    raise ValueError(f"Dati insufficienti per RSI su {ticker}")
+    raise ValueError(f"Dati insufficienti o errore fetching per RSI su {ticker}")
 
 # 2️⃣ VWAP intraday / fallback daily
 def calcola_vwap(ticker: str, period_days: int = 1) -> float:
-    intraday = yf.Ticker(ticker).history(period=f"{period_days}d", interval="5m")
-    if not intraday.empty and "Volume" in intraday.columns:
-        return float((intraday["Close"] * intraday["Volume"]).sum() / intraday["Volume"].sum())
+    """
+    Calcola il VWAP su intervalli intraday a 5m; se fallisce o dati vuoti,
+    riporta il prezzo di chiusura daily.
+    """
+    try:
+        intraday = yf.Ticker(ticker).history(period=f"{period_days}d", interval="5m")
+        if not intraday.empty and "Volume" in intraday.columns:
+            vwap = (intraday["Close"] * intraday["Volume"]).sum() / intraday["Volume"].sum()
+            return float(vwap)
+    except Exception:
+        pass
+    # fallback daily
     daily = yf.Ticker(ticker).history(period=f"{period_days}d", interval="1d")
-    return float(daily["Close"].iloc[-1])
+    if not daily.empty:
+        return float(daily["Close"].iloc[-1])
+    raise ValueError(f"Impossibile calcolare VWAP per {ticker}")
 
 # 3️⃣ News via RSS (Yahoo)
 def get_news(ticker: str, limit: int = 5) -> list[dict]:
