@@ -35,7 +35,7 @@ def fetch_history(ticker: str, period: str, interval: str = "1d",
                 continue
             return df
         except Exception as e:
-            logger.error(f"[fetch_history] Errore {e} su {ticker} {period}/{interval} (tentativo {attempt})")
+            logger.error(f"[fetch_history] errore {e} su {ticker} {period}/{interval} (tentativo {attempt})")
             time.sleep(sleep_seconds)
     return pd.DataFrame()
 
@@ -44,9 +44,9 @@ def fetch_history(ticker: str, period: str, interval: str = "1d",
 # --------------------------------------------------
 def calcola_rsi(ticker: str, period: int = 14) -> float:
     """
-    Prima tenta RSI via Finnhub; se fallisce, fallback su yfinance (6mo->1y->max).
+    RSI daily: prima Finnhub, poi yfinance (6mo->1y->max).
     """
-    # Finnhub RSI
+    # Finnhub
     try:
         now = int(time.time())
         a_month_ago = now - 60*60*24*30
@@ -60,14 +60,15 @@ def calcola_rsi(ticker: str, period: int = 14) -> float:
             return float(resp['rsi'][-1])
     except Exception as e:
         logger.warning(f"[RSI Finnhub] errore: {e}")
+
     # yfinance fallback
     for timeframe in ("6mo", "1y", "max"):
         df = fetch_history(ticker, timeframe, interval="1d")
         if len(df) >= period + 1:
-            data = df['Close']
+            data = df["Close"]
             delta = data.diff().dropna()
-            gain = delta.where(delta > 0, 0.0)
-            loss = -delta.where(delta < 0, 0.0)
+            gain  = delta.where(delta > 0, 0.0)
+            loss  = -delta.where(delta < 0, 0.0)
             avg_gain = gain.rolling(window=period).mean()
             avg_loss = loss.rolling(window=period).mean()
             rs = avg_gain / avg_loss
@@ -80,7 +81,7 @@ def calcola_rsi(ticker: str, period: int = 14) -> float:
 # --------------------------------------------------
 def calcola_vwap(ticker: str, period_days: int = 1) -> float:
     """
-    Prima VWAP via Finnhub (VWMA); se fallisce, fallback su yfinance intraday o daily.
+    VWAP intraday: prima Finnhub VWMA, poi yfinance 5m/daily.
     """
     try:
         now = int(time.time())
@@ -94,13 +95,13 @@ def calcola_vwap(ticker: str, period_days: int = 1) -> float:
             return float(resp['vwma'][-1])
     except Exception as e:
         logger.warning(f"[VWAP Finnhub] errore: {e}")
-    # yfinance fallback
+
     df = fetch_history(ticker, f"{period_days}d", interval="5m")
-    if not df.empty and 'Volume' in df.columns:
-        return float((df['Close'] * df['Volume']).sum() / df['Volume'].sum())
+    if not df.empty and "Volume" in df.columns:
+        return float((df["Close"] * df["Volume"]).sum() / df["Volume"].sum())
     df = fetch_history(ticker, f"{period_days}d", interval="1d")
     if not df.empty:
-        return float(df['Close'].iloc[-1])
+        return float(df["Close"].iloc[-1])
     raise ValueError(f"VWAP non calcolabile per {ticker}")
 
 # --------------------------------------------------
@@ -108,52 +109,44 @@ def calcola_vwap(ticker: str, period_days: int = 1) -> float:
 # --------------------------------------------------
 def get_news(ticker: str, limit: int = 5) -> list[dict]:
     try:
+        today = time.strftime('%Y-%m-%d', time.gmtime())
+        week_ago = time.strftime('%Y-%m-%d', time.gmtime(time.time() - 7*86400))
         articles = fh_client.company_news(symbol=ticker,
-                                          _from=(time.strftime('%Y-%m-%d', time.gmtime(time.time()-86400*7))),
-                                          to=time.strftime('%Y-%m-%d', time.gmtime()))
-        return [{'title': a['headline'], 'link': a['url']} for a in articles[:limit]]
+                                          _from=week_ago,
+                                          to=today)
+        return [{"title": a["headline"], "link": a["url"]} for a in articles[:limit]]
     except Exception:
         url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
         feed = feedparser.parse(url)
-        return [{'title': e.title, 'link': e.link} for e in feed.entries[:limit]]
+        return [{"title": e.title, "link": e.link} for e in feed.entries[:limit]]
 
 # --------------------------------------------------
-# 4️⃣ Fondamentali & Earnings via Finnhub
-# --------------------------------------------------
-def get_macro_data() -> dict:
-    data = fh_client.economic_calendar()
-    res = {}
-    for item in data:
-        if item.get('symbol') in {'CPI YOY', 'UNRATE', 'FEDFUNDS'}:
-            res[item['symbol']] = item.get('actual')
-    return res
-
-def get_earnings(ticker: str) -> dict:
-    cal = fh_client.earnings_calendar(symbol=ticker)
-    result = {}
-    for e in cal:
-        result[e.get('date')] = {
-            'actual': e.get('actual'),
-            'estimate': e.get('estimate')
-        }
-    return result
-
-# --------------------------------------------------
-# 5️⃣ Fondamentali aziendali (/bilancio)
+# 4️⃣ Fondamentali aziendali & Earnings
 # --------------------------------------------------
 def get_stock_financials(ticker: str) -> dict:
     rpt = fh_client.financials_reported(symbol=ticker)
-    return rpt.get('data', [{}])[0]
+    return rpt.get("data", [{}])[0]
+
+def get_earnings(ticker: str) -> dict:
+    today = time.strftime('%Y-%m-%d', time.gmtime())
+    month_ago = time.strftime('%Y-%m-%d', time.gmtime(time.time() - 30*86400))
+    cal = fh_client.earnings_calendar(symbol=ticker,
+                                     _from=month_ago,
+                                     to=today)
+    result = {}
+    for e in cal:
+        result[e["date"]] = {"actual": e.get("actual"), "estimate": e.get("estimate")}
+    return result
 
 # --------------------------------------------------
-# 6️⃣ ETF holdings
+# 5️⃣ ETF holdings
 # --------------------------------------------------
 def check_etf_changes(etf: str, period_days: int = 1) -> dict:
-    holdings = fh_client.etf_holdings(symbol=etf)
-    return {'holdings': holdings.get('holdings', [])}
+    holdings = fh_client.etfs_holdings(symbol=etf)
+    return {"holdings": holdings.get("holdings", [])}
 
 # --------------------------------------------------
-# 7️⃣ Crypto sentiment via Finnhub
+# 6️⃣ Crypto sentiment
 # --------------------------------------------------
 def get_crypto_data(symbol: str) -> dict:
     now = int(time.time())
@@ -161,22 +154,20 @@ def get_crypto_data(symbol: str) -> dict:
                                        resolution='D',
                                        _from=now-86400,
                                        to=now)
-    if candles and candles.get('c'):
-        price = candles['c'][-1]
-        prev = candles['c'][-2] if len(candles['c'])>1 else price
-        change = (price/prev - 1)*100
-        return {'price': price, 'change_24h': f"{change:.2f}%"}
-    return {'price': None, 'change_24h': None}
+    price = candles["c"][-1] if candles.get("c") else None
+    prev = candles["c"][-2] if candles.get("c") and len(candles["c"])>1 else price
+    change = (price/prev-1)*100 if price and prev else None
+    return {"price": price, "change_24h": f"{change:.2f}%"} if price else {"price": None, "change_24h": None}
 
 # --------------------------------------------------
-# 8️⃣ Idea & Score & RSS placeholders
+# 7️⃣ Idea, Score & RSS placeholders
 # --------------------------------------------------
 def get_ideas(limit: int = 5) -> list[str]:
-    return ['Idea1', 'Idea2']
+    return ["Idea1", "Idea2"]
 
 def get_score(ticker: str) -> float:
     return 75.4
 
 def fetch_rss(url: str, limit: int = 5) -> list[dict]:
     feed = feedparser.parse(url)
-    return [{'title': e.title, 'link': e.link} for e in feed.entries[:limit]]
+    return [{"title": e.title, "link": e.link} for e in feed.entries[:limit]]
