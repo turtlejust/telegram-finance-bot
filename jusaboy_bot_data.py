@@ -46,7 +46,6 @@ def calcola_rsi(ticker: str, period: int = 14) -> float:
     """
     RSI daily: prima Finnhub, poi yfinance (6mo->1y->max).
     """
-    # Finnhub
     try:
         now = int(time.time())
         a_month_ago = now - 60*60*24*30
@@ -60,15 +59,13 @@ def calcola_rsi(ticker: str, period: int = 14) -> float:
             return float(resp['rsi'][-1])
     except Exception as e:
         logger.warning(f"[RSI Finnhub] errore: {e}")
-
-    # yfinance fallback
     for timeframe in ("6mo", "1y", "max"):
         df = fetch_history(ticker, timeframe, interval="1d")
         if len(df) >= period + 1:
             data = df["Close"]
             delta = data.diff().dropna()
-            gain  = delta.where(delta > 0, 0.0)
-            loss  = -delta.where(delta < 0, 0.0)
+            gain = delta.where(delta > 0, 0.0)
+            loss = -delta.where(delta < 0, 0.0)
             avg_gain = gain.rolling(window=period).mean()
             avg_loss = loss.rolling(window=period).mean()
             rs = avg_gain / avg_loss
@@ -95,13 +92,12 @@ def calcola_vwap(ticker: str, period_days: int = 1) -> float:
             return float(resp['vwma'][-1])
     except Exception as e:
         logger.warning(f"[VWAP Finnhub] errore: {e}")
-
     df = fetch_history(ticker, f"{period_days}d", interval="5m")
     if not df.empty and "Volume" in df.columns:
-        return float((df["Close"] * df["Volume"]).sum() / df["Volume"].sum())
+        return float((df['Close'] * df['Volume']).sum() / df['Volume'].sum())
     df = fetch_history(ticker, f"{period_days}d", interval="1d")
     if not df.empty:
-        return float(df["Close"].iloc[-1])
+        return float(df['Close'].iloc[-1])
     raise ValueError(f"VWAP non calcolabile per {ticker}")
 
 # --------------------------------------------------
@@ -114,19 +110,32 @@ def get_news(ticker: str, limit: int = 5) -> list[dict]:
         articles = fh_client.company_news(symbol=ticker,
                                           _from=week_ago,
                                           to=today)
-        return [{"title": a["headline"], "link": a["url"]} for a in articles[:limit]]
+        return [{"title": a['headline'], "link": a['url']} for a in articles[:limit]]
     except Exception:
         url = f"https://finance.yahoo.com/rss/headline?s={ticker}"
         feed = feedparser.parse(url)
         return [{"title": e.title, "link": e.link} for e in feed.entries[:limit]]
 
 # --------------------------------------------------
-# 4️⃣ Fondamentali aziendali & Earnings
+# 4️⃣ Macro data (stub)
+# --------------------------------------------------
+def get_macro_data() -> dict:
+    return {
+        "CPI (MoM)": "0.4%",
+        "Unemployment Rate": "5.1%",
+        "Fed Funds Rate": "5.25%"
+    }
+
+# --------------------------------------------------
+# 5️⃣ Fondamentali aziendali
 # --------------------------------------------------
 def get_stock_financials(ticker: str) -> dict:
     rpt = fh_client.financials_reported(symbol=ticker)
     return rpt.get("data", [{}])[0]
 
+# --------------------------------------------------
+# 6️⃣ Earnings
+# --------------------------------------------------
 def get_earnings(ticker: str) -> dict:
     today = time.strftime('%Y-%m-%d', time.gmtime())
     month_ago = time.strftime('%Y-%m-%d', time.gmtime(time.time() - 30*86400))
@@ -135,18 +144,18 @@ def get_earnings(ticker: str) -> dict:
                                      to=today)
     result = {}
     for e in cal:
-        result[e["date"]] = {"actual": e.get("actual"), "estimate": e.get("estimate")}
+        result[e['date']] = {"actual": e.get('actual'), "estimate": e.get('estimate')}
     return result
 
 # --------------------------------------------------
-# 5️⃣ ETF holdings
+# 7️⃣ ETF holdings
 # --------------------------------------------------
 def check_etf_changes(etf: str, period_days: int = 1) -> dict:
     holdings = fh_client.etfs_holdings(symbol=etf)
-    return {"holdings": holdings.get("holdings", [])}
+    return {"holdings": holdings.get('holdings', [])}
 
 # --------------------------------------------------
-# 6️⃣ Crypto sentiment
+# 8️⃣ Crypto sentiment
 # --------------------------------------------------
 def get_crypto_data(symbol: str) -> dict:
     now = int(time.time())
@@ -154,13 +163,13 @@ def get_crypto_data(symbol: str) -> dict:
                                        resolution='D',
                                        _from=now-86400,
                                        to=now)
-    price = candles["c"][-1] if candles.get("c") else None
-    prev = candles["c"][-2] if candles.get("c") and len(candles["c"])>1 else price
+    price = candles['c'][-1] if candles.get('c') else None
+    prev = candles['c'][-2] if candles.get('c') and len(candles['c'])>1 else price
     change = (price/prev-1)*100 if price and prev else None
     return {"price": price, "change_24h": f"{change:.2f}%"} if price else {"price": None, "change_24h": None}
 
 # --------------------------------------------------
-# 7️⃣ Idea, Score & RSS placeholders
+# 9️⃣ Idea, Score & RSS placeholders
 # --------------------------------------------------
 def get_ideas(limit: int = 5) -> list[str]:
     return ["Idea1", "Idea2"]
